@@ -1,4 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors, FontSizes, Spacing } from "../../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,6 +53,10 @@ export default function VerifyPhoneScreen() {
       const result = await apiService.verifyOTP(phoneNumber, otpString);
       
       if (result.success) {
+        // Persist phone for later profile fetch
+        try {
+          await AsyncStorage.setItem("dm.phone", phoneNumber);
+        } catch {}
         // Navigate to main app
         router.replace("/(tabs)");
       } else {

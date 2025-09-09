@@ -1,18 +1,51 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Modal, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, FontSizes, Spacing } from "../../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../../lib/supabase";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
 
+  const [loading, setLoading] = useState(true);
+  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     navigation.setOptions({ headerShown: false }); // Hide default header
   }, [navigation]);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const savedPhone = await AsyncStorage.getItem("dm.phone");
+      if (!savedPhone) { setLoading(false); return; }
+      setPhone(savedPhone);
+      const { data } = await supabase
+        .from("users")
+        .select("first_name,last_name,email,phone_number")
+        .eq("phone_number", savedPhone)
+        .single();
+      if (data) {
+        setFirstName(data.first_name || "");
+        setLastName(data.last_name || "");
+        setEmail(data.email || "");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const handleLogout = () => {
     router.push("/(auth)/login");
@@ -22,7 +55,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Top Section - User Name and Profile Picture */}
       <View style={[styles.topSection, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.userName}>Joshua Smith</Text>
+        <Text style={styles.userName}>{[firstName, lastName].filter(Boolean).join(" ") || "Your Name"}</Text>
         <TouchableOpacity style={styles.profilePicture}>
           <Ionicons name="person" size={40} color="#9ca3af" />
         </TouchableOpacity>
@@ -45,11 +78,11 @@ export default function ProfileScreen() {
         <View style={styles.userInfoRow}>
           <View style={styles.userInfoItem}>
             <Text style={styles.userInfoLabel}>Email</Text>
-            <Text style={styles.userInfoValue}>joshua.smith@email.com</Text>
+            <Text style={styles.userInfoValue}>{email || "-"}</Text>
           </View>
           <View style={styles.userInfoItem}>
             <Text style={styles.userInfoLabel}>Phone</Text>
-            <Text style={styles.userInfoValue}>+1 (555) 123-4567</Text>
+            <Text style={styles.userInfoValue}>+91 {phone || "-"}</Text>
           </View>
         </View>
         <View style={styles.userInfoRow}>
@@ -57,12 +90,18 @@ export default function ProfileScreen() {
             <Text style={styles.userInfoLabel}>Location</Text>
             <Text style={styles.userInfoValue}>New York, NY</Text>
           </View>
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity style={styles.editProfileButton} onPress={() => setIsEditOpen(true)}>
             <Ionicons name="create-outline" size={16} color="#3b82f6" />
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {loading && (
+        <View style={{ paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg }}>
+          <ActivityIndicator />
+        </View>
+      )}
 
 
       {/* Feature Cards */}
@@ -205,6 +244,61 @@ export default function ProfileScreen() {
         <Ionicons name="log-out-outline" size={20} color="#dc2626" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
+
+      <Modal visible={isEditOpen} transparent animationType="slide" onRequestClose={() => setIsEditOpen(false)}>
+        <View style={{ flex:1, backgroundColor:"rgba(0,0,0,0.3)", justifyContent:"flex-end" }}>
+          <View style={{ backgroundColor:"#fff", borderTopLeftRadius:16, borderTopRightRadius:16, padding:16 }}>
+            <Text style={{ fontSize:18, fontWeight:"700", marginBottom:12, color: Colors.primary }}>Edit Profile</Text>
+
+            <TextInput
+              placeholder="First name"
+              value={firstName}
+              onChangeText={setFirstName}
+              style={{ backgroundColor:"#F3F4F6", borderRadius:12, padding:12, marginBottom:10 }}
+            />
+            <TextInput
+              placeholder="Last name"
+              value={lastName}
+              onChangeText={setLastName}
+              style={{ backgroundColor:"#F3F4F6", borderRadius:12, padding:12, marginBottom:10 }}
+            />
+            <TextInput
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={{ backgroundColor:"#F3F4F6", borderRadius:12, padding:12, marginBottom:16 }}
+            />
+            <TextInput
+              value={phone}
+              editable={false}
+              style={{ backgroundColor:"#E5E7EB", borderRadius:12, padding:12, marginBottom:16, color:"#6B7280" }}
+            />
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.primary, borderRadius:12, padding:14, alignItems:"center", opacity: saving ? 0.6 : 1 }}
+              disabled={saving}
+              onPress={async () => {
+                if (!phone) { setIsEditOpen(false); return; }
+                setSaving(true);
+                await supabase
+                  .from("users")
+                  .update({ first_name: firstName.trim(), last_name: lastName.trim(), email: email.trim() })
+                  .eq("phone_number", phone);
+                setSaving(false);
+                setIsEditOpen(false);
+                load();
+              }}
+            >
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color:"#fff", fontWeight:"700" }}>Save changes</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={{ padding:14, alignItems:"center" }} onPress={() => setIsEditOpen(false)}>
+              <Text style={{ color:"#6B7280", fontWeight:"600" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
