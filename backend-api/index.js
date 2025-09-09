@@ -1,7 +1,7 @@
 // Backend API for Twilio integration
 // Deploy this to Vercel, Netlify, or any Node.js hosting service
 
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
 const twilio = require('twilio');
