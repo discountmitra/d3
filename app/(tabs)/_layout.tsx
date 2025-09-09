@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TouchableOpacity } from "react-native";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -32,8 +31,6 @@ export default function TabsLayout() {
         tabBarIconStyle: {
           marginTop: 4,
         },
-        tabBarPressColor: "rgba(255, 255, 255, 0.1)",
-        tabBarPressOpacity: 0.1,
       }}
     >
       <Tabs.Screen
@@ -47,13 +44,6 @@ export default function TabsLayout() {
               color={color} 
             />
           ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              style={[props.style, { backgroundColor: 'transparent' }]}
-              activeOpacity={0.7}
-            />
-          )
         }}
       />
       <Tabs.Screen
@@ -67,13 +57,6 @@ export default function TabsLayout() {
               color={color} 
             />
           ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              style={[props.style, { backgroundColor: 'transparent' }]}
-              activeOpacity={0.7}
-            />
-          )
         }}
       />
       <Tabs.Screen
@@ -87,13 +70,6 @@ export default function TabsLayout() {
               color={color} 
             />
           ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              style={[props.style, { backgroundColor: 'transparent' }]}
-              activeOpacity={0.7}
-            />
-          )
         }}
       />
     </Tabs>
